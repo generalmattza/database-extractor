@@ -134,12 +134,18 @@ class DataExtractorQueryConfig(Mapping):
     """
 
     time_format: str = DEFAULT_TIME_FORMAT
-    delta_time_start: DeltaTime = DeltaTime()
-    delta_time_end: DeltaTime = DeltaTime()
+    delta_time_start: DeltaTime = None
+    delta_time_end: DeltaTime = None
     tz_offset: int = 0
     bucket: str = ""
     columns_to_drop: list[str] = None
     filter: str = 'r["_measurement"] =~ /.*/'
+
+    def __post_init__(self):
+        if self.delta_time_start is None:
+            self.delta_time_start = DeltaTime()
+        if self.delta_time_end is None:
+            self.delta_time_end = DeltaTime()
 
     def __getitem__(self, key):
         if key in self.__dict__:

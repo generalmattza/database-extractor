@@ -5,4 +5,4 @@ delta_time_start = [0, -1, 0, 0]                         # days, hours, minutes,
 delta_time_end = [0, 1, 0, 0]                            # days, hours, minutes, seconds
 tz_offset = -8                                           # hours
 columns_to_drop = ["result", "table", "_start", "_stop"]
-filter = 'r["id"] =~ /.*/'
+filter = 'r["id"] =~ /.*/'                               # filter to apply to the data, uses regex
