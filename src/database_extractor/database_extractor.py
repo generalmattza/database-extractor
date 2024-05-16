@@ -296,8 +296,7 @@ def query_database(
                 extra={"columns_to_drop": columns_to_drop},
             )
 
-    query_end_time = time.perf_counter()
-    query_total_time = query_end_time - query_start_time
+    query_total_time = time.perf_counter() - query_start_time
 
     if result is not None:
         logger.info(

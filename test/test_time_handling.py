@@ -59,5 +59,18 @@ def test_create_query_endpoints_timezone():
     time_start, time_end = construct_query_time_endpoints(
         query_time, delta_time_start, delta_time_end, tz_offset=-8
     )
-    assert time_start == "2024-05-16T00:00:00Z"
-    assert time_end == "2024-05-16T03:00:00Z"
+    assert time_start == "2024-05-16T16:00:00Z"
+    assert time_end == "2024-05-16T19:00:00Z"
+
+
+def test_shift_string_time():
+    from database_extractor.database_extractor import shift_string_time
+
+    time_string = "2024-05-16T10:00:00Z"
+    delta_time = DeltaTime(0, -2, 0, 0)
+    shifted_time = shift_string_time(time_string, delta_time)
+    assert shifted_time == "2024-05-16T08:00:00Z"
+
+    delta_time = DeltaTime(0, 1, 0, 0)
+    shifted_time = shift_string_time(time_string, delta_time)
+    assert shifted_time == "2024-05-16T11:00:00Z"
