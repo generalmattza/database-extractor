@@ -1,0 +1,9 @@
+[query]
+bucket = 'prototype-zero'
+time_format = "%Y-%m-%dT%H:%M:%SZ"
+delta_time_start = [0, -2, 0, 0]                                # days, hours, minutes, seconds
+delta_time_end = [0, 1, 0, 0]                                   # days, hours, minutes, seconds
+tz_offset = -8                                                  # hours
+columns_to_drop = ["location", "type_hardware", "type_measure"]
+rename_columns = "${id}"
+filter = 'r["id"] =~ /.*/'

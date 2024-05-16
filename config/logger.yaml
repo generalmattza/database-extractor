@@ -1,0 +1,43 @@
+version: 1
+
+handlers:
+  console:
+    class : logging.StreamHandler
+    formatter: default
+    level   : INFO
+    stream  : ext://sys.stdout
+  database_extractor.info.file:
+    class : logging.handlers.RotatingFileHandler
+    formatter: json
+    level   : INFO
+    filename: logs/database_extractor.debug.log
+    maxBytes: 10_000_000
+    backupCount: 7
+  fast_database_clients.info.file:
+    class : logging.handlers.RotatingFileHandler
+    formatter: brief
+    level   : INFO
+    filename: logs/fast_database_clients.info.log
+    maxBytes: 10_000_000
+    backupCount: 7
+
+formatters:
+  brief:
+    format: '%(message)s'
+  default:
+    format: '%(asctime)s %(levelname)-8s %(message)s'
+    datefmt: '%Y-%m-%d %H:%M:%S'
+  verbose:
+    format: "%(asctime)s,%(msecs)d - %(name)s - %(levelname)-8s - %(message)s"
+    datefmt: "%Y-%m-%d %H:%M:%S"
+  json:
+    class: pythonjsonlogger.jsonlogger.JsonFormatter
+    format: '%(asctime)s %(levelname)s %(message)s'
+
+loggers:
+  database_extractor:
+    level: DEBUG
+    handlers:
+      - console
+      - database_extractor.info.file
+      - fast_database_clients.info.file
