@@ -7,8 +7,6 @@
 """Some demonstration code for querying a database and returning the results as a dataframe"""
 # ---------------------------------------------------------------------------
 
-
-from datetime import datetime
 from logging.config import dictConfig
 
 from database_extractor import (
@@ -45,9 +43,11 @@ def main():
     query_config = DataExtractorQueryConfig(**application_config["query"])
 
     # This is the base time for the query, it can be set to the current time in the local timezone
+    # Time format is set in the application configuration
     # The appropriate timezone offset is set in the application configuration
     # and applied in the query_database function
-    query_time = datetime.now()
+    # query_time = datetime.now()
+    query_time = "2024-05-15T17:00:00Z"
 
     # Query the database, and return a Pandas DataFrame object
     result = query_database(
@@ -56,7 +56,7 @@ def main():
         **query_config,
     )
 
-    # Print the first 10 rows of the result
+    # Do something with the result
     print(result.head(10))
 
 

@@ -140,7 +140,6 @@ class DataExtractorQueryConfig(Mapping):
     bucket: str = ""
     columns_to_drop: list[str] = None
     filter: str = 'r["_measurement"] =~ /.*/'
-    rename_columns: str = None
 
     def __getitem__(self, key):
         if key in self.__dict__:
@@ -155,6 +154,21 @@ class DataExtractorQueryConfig(Mapping):
 
     def __repr__(self):
         return f"DataExtractorQueryConfig({self.__dict__})"
+
+
+def shift_string_time(
+    time_string: str,
+    delta_time: Union[DeltaTime, int] = None,
+    timeformat=DEFAULT_TIME_FORMAT,
+) -> str:
+    if delta_time is None or delta_time == 0:
+        return time_string
+    if isinstance(delta_time, int):
+        delta_time = DeltaTime(hours=delta_time)
+
+    return (datetime.strptime(time_string, timeformat) + delta_time).strftime(
+        timeformat
+    )
 
 
 def create_influxdb_client(config_path: str) -> FastInfluxDBClient:
@@ -192,7 +206,7 @@ def construct_query_time_endpoints(
     :param delta_time_end: The time delta to add to the query time
     :param tz_offset: The timezone offset in hours
     :param time_format: The time format to return
-    :return: The start and end time as strings
+    :return: The start and end time as strings in utc time format
     """
 
     if isinstance(delta_time_start, (tuple, list)):
@@ -204,10 +218,10 @@ def construct_query_time_endpoints(
 
     tz_offset = timedelta(hours=tz_offset)
 
-    start_time = (query_time + delta_time_start + tz_offset).strftime(time_format)
-    end_time = (query_time + delta_time_end + tz_offset).strftime(time_format)
+    start_time_utc = (query_time + delta_time_start - tz_offset).strftime(time_format)
+    end_time_utc = (query_time + delta_time_end - tz_offset).strftime(time_format)
 
-    return start_time, end_time
+    return start_time_utc, end_time_utc
 
 
 def query_database(
@@ -218,7 +232,6 @@ def query_database(
     delta_time_end,
     columns_to_drop=None,
     filter='r["_measurement"] =~ /.*/',
-    rename_columns=None,
     tz_offset=0,
     time_format=DEFAULT_TIME_FORMAT,
 ):
@@ -231,14 +244,13 @@ def query_database(
     :param delta_time_end: The time delta to add to the query time
     :param columns_to_drop: Columns to drop from the resulting dataframe
     :param filter: A filter to be applied to the returned data
-    :param rename_columns: A pattern to rename columns in the resulting dataframe
     :param tz_offset: The timezone offset in hours
     :param time_format: The time format to return
     :return: The query result as a dataframe
     """
     # Construct the endpoints of the query time using the specified time deltas
     # An optional timezone offset can be applied to the query time
-    start_time, end_time = construct_query_time_endpoints(
+    start_time_utc, end_time_utc = construct_query_time_endpoints(
         query_time,
         delta_time_start,
         delta_time_end,
@@ -247,28 +259,31 @@ def query_database(
     )
 
     # Construct the Flux query. This is a simple query that selects all fields from the specified bucket
+    # Returned data is timeshifted to account for the timezone offset
     query = f"""from(bucket: "{bucket}")
-    |> range(start: {start_time}, stop: {end_time})
+    |> range(start: {start_time_utc}, stop: {end_time_utc})
     |> timeShift(duration: {tz_offset}h)
     |> filter(fn: (r) => {filter})
-    |> pivot(rowKey:["_time"], columnKey: ["_field"], valueColumn: "_value")
+    |> pivot(rowKey:["_time"], columnKey: ["id"], valueColumn: "_value")
     |> group()
     """
+    start_time_local = shift_string_time(start_time_utc, tz_offset)
+    end_time_local = shift_string_time(end_time_utc, tz_offset)
     logger.info(
-        f"Querying {client}, bucket:{bucket}, query_time:{query_time}",
+        f"Querying {client}, bucket:{bucket}, query_time:{start_time_local} to {end_time_local}",
         extra={
             "bucket": bucket,
-            "start_time": start_time,
-            "end_time": end_time,
+            "start_time": start_time_utc,
+            "end_time": end_time_utc,
             "query": query,
         },
     )
 
-    start_time = time.perf_counter()
+    query_start_time = time.perf_counter()
 
     result = client.query_dataframe(query)
-    if columns_to_drop:
 
+    if columns_to_drop:
         try:
             result = result.drop(columns=columns_to_drop)
             logger.info(
@@ -281,11 +296,12 @@ def query_database(
                 extra={"columns_to_drop": columns_to_drop},
             )
 
-    end_time = time.perf_counter()
+    query_end_time = time.perf_counter()
+    query_total_time = query_end_time - query_start_time
 
     if result is not None:
         logger.info(
-            f"Query returned table of size {result.shape[0]} rows x {result.shape[1]} columns in {end_time-start_time:.2f}s",
+            f"Query returned table of size {result.shape[0]} rows x {result.shape[1]} columns in {query_total_time:.2f}s",
             extra={"result.shape": result.shape},
         )
 
