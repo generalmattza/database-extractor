@@ -1,7 +1,7 @@
 # database-extractor
 ### A module for extracting data from a database
 
-This module facilitates the extraction of data from a database and returning it as a Pandas dataframe.
+This module facilitates the extraction of data from a database and returns it as a Pandas dataframe.
 Currently only Influx database queries are supported, but other database types could be added.
 
 ## Installation Process
