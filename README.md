@@ -4,6 +4,35 @@
 This module facilitates the extraction of data from a database and returning it as a Pandas dataframe.
 Currently only Influx database queries are supported, but other database types could be added.
 
+## Installation Process
+Clone the repo
+> git clone https://github.com/generalmattza/database-extractor
+
+Create a new virtual environment
+> cd database-extractor
+> python -m venv .venv
+> .venv/bin/activate.ps1 #assuming powershell terminal
+
+Install dependancies
+> pip install .
+
+Rename the influx configuration file
+> mv config/.influxdb.toml-default config/.influxdb.toml
+
+You can then update the .influxdb.toml file to your desired influxdb server settings.
+The main settings that are required to connect are <i>url, token, org</i> and <i>default_bucket</i>
+
+You can test the client configuration as follows:
+```python
+database_client = create_influxdb_client("config/.influxdb.toml")
+database_client.ping() # Returns True if all is well
+```
+
+## Example Usage
+In this example, the configuration is set in a dict and passed to the query_database method.
+
+See the [main.py](https://github.com/generalmattza/database-extractor/blob/main/main.py) file for an implmentation that is configured using the configuration files in <i>config/*</>
+
 ```python
 from database_extractor import (
     create_influxdb_client,
