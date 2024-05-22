@@ -31,7 +31,7 @@ database_client.ping() # Returns True if all is well
 ## Example Usage
 In this example, the configuration is set in a dict and passed to the query_database method.
 
-See the [main.py](https://github.com/generalmattza/database-extractor/blob/main/main.py) file for an implmentation that is configured using the configuration files in <i>config/*</i>
+See the [main.py](https://github.com/generalmattza/database-extractor/blob/main/main.py) file for an implementation that is configured using the configuration files in <i>config/*</i>
 
 ```python
 from database_extractor import (
