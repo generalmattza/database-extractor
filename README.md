@@ -33,6 +33,11 @@ In this example, the configuration is set in a dict and passed to the query_data
 
 See the [main.py](https://github.com/generalmattza/database-extractor/blob/main/main.py) file for an implementation that is configured using the configuration files in <i>config/*</i>
 
+The intended method for pulling data is to specify a time, and then offsets around that time will be used to build the query.
+
+Specific metrics can be filtered using the 'filter' setting, where the filter is provided using regex.
+The filter below 'r["id"] =~ /.*/' will include all metrics with an 'id' property.
+
 ```python
 from database_extractor import (
     create_influxdb_client,
