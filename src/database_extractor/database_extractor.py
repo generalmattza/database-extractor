@@ -140,12 +140,18 @@ class DataExtractorQueryConfig(Mapping):
     bucket: str = ""
     columns_to_drop: list[str] = None
     filter: str = 'r["_measurement"] =~ /.*/'
+    column_key: str = "id"
+    aggregate_function: str = "last"
+    aggregate_window: str = "1s"
+    sort_by: list[str] = None
 
     def __post_init__(self):
         if self.delta_time_start is None:
             self.delta_time_start = DeltaTime()
         if self.delta_time_end is None:
             self.delta_time_end = DeltaTime()
+        if self.sort_by is None:
+            self.sort_by = ["_time", "_field"]
 
     def __getitem__(self, key):
         if key in self.__dict__:
@@ -230,6 +236,17 @@ def construct_query_time_endpoints(
     return start_time_utc, end_time_utc
 
 
+def list_to_fstring(str_list):
+    """
+    Convert a list of strings to a formatted string in the format ["str1", "str2"].
+
+    :param str_list: List of strings.
+    :return: Formatted string.
+    """
+    formatted_elements = [f'"{s}"' for s in str_list]
+    return f'[{", ".join(formatted_elements)}]'
+
+
 def query_database(
     client,
     bucket,
@@ -238,8 +255,12 @@ def query_database(
     delta_time_end,
     columns_to_drop=None,
     filter='r["_measurement"] =~ /.*/',
+    column_key="id",
     tz_offset=0,
     time_format=DEFAULT_TIME_FORMAT,
+    aggregate_function="last",
+    aggregate_window="1s",
+    sort_by=["_time", "_field"],
 ):
     """
     Query a database and return the results as a dataframe
@@ -270,8 +291,10 @@ def query_database(
     |> range(start: {start_time_utc}, stop: {end_time_utc})
     |> timeShift(duration: {tz_offset}h)
     |> filter(fn: (r) => {filter})
-    |> pivot(rowKey:["_time"], columnKey: ["id"], valueColumn: "_value")
+    |> aggregateWindow(every: {aggregate_window}, fn: {aggregate_function}, createEmpty: false)
+    |> pivot(rowKey:["_time"], columnKey: ["{column_key}"], valueColumn: "_value")
     |> group()
+    |> sort(columns: {list_to_fstring(sort_by)})
     """
     start_time_local = shift_string_time(start_time_utc, tz_offset)
     end_time_local = shift_string_time(end_time_utc, tz_offset)
@@ -290,17 +313,18 @@ def query_database(
     result = client.query_dataframe(query)
 
     if columns_to_drop:
-        try:
-            result = result.drop(columns=columns_to_drop)
-            logger.info(
-                f"Dropped columns from dataframe: {columns_to_drop}",
-                extra={"columns_to_drop": columns_to_drop},
-            )
-        except KeyError as e:
-            logger.error(
-                f"Failed to drop columns from dataframe: {e.args[0]}",
-                extra={"columns_to_drop": columns_to_drop},
-            )
+        if len(result):
+            try:
+                result = result.drop(columns=columns_to_drop)
+                logger.info(
+                    f"Dropped columns from dataframe: {columns_to_drop}",
+                    extra={"columns_to_drop": columns_to_drop},
+                )
+            except KeyError as e:
+                logger.error(
+                    f"Failed to drop columns from dataframe: {e.args[0]}",
+                    extra={"columns_to_drop": columns_to_drop},
+                )
 
     query_total_time = time.perf_counter() - query_start_time
 
