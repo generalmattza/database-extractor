@@ -8,4 +8,6 @@ from .database_extractor import (
     create_influxdb_client,
     DataExtractorQueryConfig,
     query_database,
+    query_data_for_day,
+    query_data_for_range,
 )

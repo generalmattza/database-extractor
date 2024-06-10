@@ -9,12 +9,14 @@
 
 from datetime import datetime, timedelta
 from logging.config import dictConfig
+import time
 
 from database_extractor import (
     load_config,
     create_influxdb_client,
     DataExtractorQueryConfig,
     query_database,
+    query_data_for_day,
 )
 
 
@@ -32,34 +34,42 @@ def setup_logging(filepath="config/logger.yaml"):
 
 
 def main():
-
-    # Fetch application configuration from file
-    application_config = load_config("config/application.toml")
-
-    # Create a client to interact with the InfluxDB database
-    # Configuration is fetched from the .influxdb.toml file
+    start_time = datetime.now()
     database_client = create_influxdb_client("config/.influxdb.toml")
+    previous_day = datetime(start_time.year, start_time.month, start_time.day) - timedelta(1)
+    # For running a cronjob at midnight
+    query_data_for_day(database_client, previous_day)
+    # For running the script for a chosen day
+    # query_data_for_day(database_client, datetime(2024,6,6))
 
-    # Create a query configuration object to parse the configuration file
-    query_config = DataExtractorQueryConfig(**application_config["query"])
+    # ------- An example of running the code ---------------------
+    # # Fetch application configuration from file
+    # application_config = load_config("config/application.toml")
 
-    # This is the base time for the query, it can be set to the current time in the local timezone
-    # Time format is set in the application configuration
-    # The appropriate timezone offset is set in the application configuration
-    # and applied in the query_database function
-    # query_time = datetime.now()
-    query_time = "2024-05-22T17:00:00Z"
+    # # Create a client to interact with the InfluxDB database
+    # # Configuration is fetched from the .influxdb.toml file
+    # database_client = create_influxdb_client("config/.influxdb.toml")
 
-    # Query the database, and return a Pandas DataFrame object
-    result = query_database(
-        client=database_client,
-        query_time=query_time,
-        **query_config,
-    )
+    # # Create a query configuration object to parse the configuration file
+    # query_config = DataExtractorQueryConfig(**application_config["query"])
 
-    # Do something with the result
-    # print(result.head(10))
-    result.to_pickle("./influxdb_live_1.pkl")
+    # # This is the base time for the query, it can be set to the current time in the local timezone
+    # # Time format is set in the application configuration
+    # # The appropriate timezone offset is set in the application configuration
+    # # and applied in the query_database function
+    # # query_time = datetime.now()
+    # query_time = "2024-05-22T17:00:00Z"
+
+    # # Query the database, and return a Pandas DataFrame object
+    # result = query_database(
+    #     client=database_client,
+    #     query_time=query_time,
+    #     **query_config,
+    # )
+
+    # # Do something with the result
+    # # print(result.head(10))
+    # result.to_pickle("./influxdb_live_1.pkl")
 
 
 def generate_datetime_list(
