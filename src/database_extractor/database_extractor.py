@@ -292,11 +292,11 @@ def query_database(
     |> range(start: {start_time_utc}, stop: {end_time_utc})
     |> timeShift(duration: {tz_offset}h)
     |> filter(fn: (r) => {filter})
-    |> aggregateWindow(every: {aggregate_window}, fn: {aggregate_function}, createEmpty: false)
     |> pivot(rowKey:["_time"], columnKey: ["{column_key}"], valueColumn: "_value")
     |> group()
     |> sort(columns: {list_to_fstring(sort_by)})
     """
+    # |> aggregateWindow(every: {aggregate_window}, fn: {aggregate_function}, createEmpty: false) 
     print(list_to_fstring(sort_by))
     start_time_local = shift_string_time(start_time_utc, tz_offset)
     end_time_local = shift_string_time(end_time_utc, tz_offset)
@@ -344,11 +344,11 @@ def process_results(df: pd.DataFrame, current_date: datetime) -> None:
 
     # Do something with the result
     df = df.set_index("_time")
-    # df = df.resample(rule = "1s").mean()
+    df = df.resample(rule = "1s").last()
     df = df.dropna(axis = 0, how = "all")
     try:
-        df.to_csv(f"/srv/data/influx/prototype-zero_realtime-data_{current_date.year}-{current_date.month:02d}-{current_date.day:02d}_mqtt.csv")
-        # df.to_csv(f"/nfs/research/gfyvrdatadash/influx/prototype-zero_realtime-data_{current_date.year}-{current_date.month:02d}-{current_date.day:02d}_mqtt.csv")
+        df.to_csv(f"/srv/data/influx/prototype-zero_realtime-data_{current_date.year}-{current_date.month:02d}-{current_date.day:02d}.csv")
+        # df.to_csv(f"/nfs/research/gfyvrdatadash/influx/prototype-zero_realtime-data_{current_date.year}-{current_date.month:02d}-{current_date.day:02d}.csv")
     except Exception as error:
         logger.error(f"{error}")
     else:
